@@ -190,6 +190,10 @@ cd ai-driven-devsecops-framework
 git lfs pull
 ```
 
+Repository URL:
+
+[https://github.com/mrossmaree/ai-driven-devsecops-framework](https://github.com/mrossmaree/ai-driven-devsecops-framework)
+
 All trained `.pkl` model files under `models/` are managed through Git
 LFS.
 
@@ -340,37 +344,72 @@ and the Decision Engine.
 
 ## Automated Testing
 
-The framework includes a comprehensive automated test suite covering the Security Decision Engine and ML1 Commit Risk Predictor runtime components.
+The framework validation evidence is organized into three layers:
 
-### Quick Start
+1. Focused automated software tests (deterministic runtime behavior and report contracts).
+2. Offline machine-learning evaluation (validation and held-out test evidence per component).
+3. End-to-end framework validation (GitHub Actions execution in vulnerability scenarios producing PASS, REVIEW, and BLOCK outcomes).
 
-Run all current unit tests:
+### Focused Automated Test Suite
+
+Current test files:
+
+- `tests/unit/test_commit_risk_predictor.py` (ML1)
+- `tests/unit/test_alert_prioritizers.py` (ML2 Cppcheck + Clang)
+- `tests/unit/test_anomaly_detection.py` (ML3)
+- `tests/unit/test_security_decision_engine.py` (Decision Engine)
+- `tests/integration/test_decision_engine_contracts.py` (lightweight integration/contract)
+
+Current totals:
+
+- ML1: 9 tests
+- ML2: 9 tests
+- ML3: 7 tests
+- Security Decision Engine: 10 tests
+- Integration/contract: 3 tests
+- Total: 38 tests
+
+Run all tests:
 
 ```bash
-python3 -m pytest tests/unit -v
+python3 -m pytest -q
 ```
 
-Run combined coverage:
+Run per component:
 
 ```bash
-python3 -m pytest tests/unit \
-  --cov=ml.decision_engine \
-  --cov=ml.commit_risk \
-  --cov-report=term-missing
+python3 -m pytest -q tests/unit/test_commit_risk_predictor.py
+python3 -m pytest -q tests/unit/test_alert_prioritizers.py
+python3 -m pytest -q tests/unit/test_anomaly_detection.py
+python3 -m pytest -q tests/unit/test_security_decision_engine.py
+python3 -m pytest -q tests/integration/test_decision_engine_contracts.py
 ```
 
-### Test Results
+Expected result for the current repository state:
 
-- **Phase 1 (Decision Engine)**: 70 tests, 99% coverage
-- **Phase 2 (ML1 Commit Risk Predictor)**: 92 tests, 66% coverage
-- **Combined**: 162 tests, 100% pass rate
+- 38 passed
+- 0 failed
+- 0 skipped
 
-### Documentation
+The automated tests are intentionally focused and do not claim exhaustive runtime, model-quality, or production-operations coverage.
 
-- **Test design and scenarios**: [doc/testing/TESTING.md](doc/testing/TESTING.md)
-- **Setup and execution guide**: [doc/testing/SETUP_AND_RUN_TESTS.md](doc/testing/SETUP_AND_RUN_TESTS.md)
+### Offline ML Evaluation (Separate from Pytest)
 
-The test suite validates deterministic logic, error handling, and component integration using mocked dependencies. Model prediction quality is measured separately using validation datasets documented in evaluation reports under `reports/`.
+Model quality is validated offline with validation and held-out test data, with component evidence under `reports/` and metadata under `models/`:
+
+- ML1 comparison/evaluation evidence
+- ML2 Cppcheck and Clang comparison/evaluation evidence
+- ML3 comparison/evaluation evidence
+
+These evaluation artifacts support dissertation analysis and are distinct from deterministic software tests.
+
+### End-to-End Framework Validation
+
+End-to-end behavior is validated through GitHub Actions workflow execution and scenario repositories, including:
+
+- push/pull-request workflow runs
+- PASS, REVIEW, and BLOCK outcome cases
+- generated ML1/ML2/ML3 and final decision reports
 
 ## Limitations
 

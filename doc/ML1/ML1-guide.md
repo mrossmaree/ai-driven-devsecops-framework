@@ -142,7 +142,7 @@ Use the framework action in target repo workflow:
 
 ```yaml
 - name: Run AI DevSecOps Framework
-  uses: MishelRossmaree/ai-driven-devsecops-framework@main
+  uses: mrossmaree/ai-driven-devsecops-framework@main
   with:
     scan-path: "."
     ml1-high-threshold: "70"

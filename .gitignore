@@ -46,8 +46,11 @@ reports/**
 # Python cache
 # -------------------------
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyc
 .pytest_cache/
+**/.pytest_cache/
 .mypy_cache/
 
 # -------------------------
@@ -56,7 +59,10 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+**/htmlcov/
 coverage.xml
+test-results/
+pytest-debug.log
 
 # -------------------------
 # Virtual environments
@@ -70,11 +76,13 @@ env/
 # -------------------------
 .vscode/
 .idea/
+*.code-workspace
 
 # -------------------------
 # OS files
 # -------------------------
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # -------------------------

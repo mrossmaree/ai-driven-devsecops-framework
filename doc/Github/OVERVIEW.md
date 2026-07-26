@@ -29,7 +29,7 @@ Typical event triggers:
 The target workflow calls this framework with:
 
 ```yaml
-uses: MishelRossmaree/ai-driven-devsecops-framework@main
+uses: mrossmaree/ai-driven-devsecops-framework@main
 ```
 
 ## End-to-End Execution Sequence

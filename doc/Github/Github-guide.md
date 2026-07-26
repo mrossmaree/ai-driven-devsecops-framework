@@ -38,7 +38,7 @@ This is important because ML1 uses git diff history for changed file and changed
 
 ```yaml
 - name: Run AI DevSecOps Framework
-  uses: MishelRossmaree/ai-driven-devsecops-framework@main
+  uses: mrossmaree/ai-driven-devsecops-framework@main
   with:
     scan-path: "."
 ```
@@ -109,7 +109,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run AI DevSecOps Framework
-        uses: MishelRossmaree/ai-driven-devsecops-framework@main
+        uses: mrossmaree/ai-driven-devsecops-framework@main
         with:
           scan-path: "."
           ml3-min-rows: "5"
