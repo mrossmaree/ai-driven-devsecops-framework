@@ -13,6 +13,8 @@ on:
       - '**/*.hpp'
 
   pull_request:
+    branches:
+      - main
     paths:
       - '**/*.c'
       - '**/*.cpp'

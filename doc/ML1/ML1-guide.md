@@ -155,8 +155,17 @@ Important checkout setting:
 ```yaml
 - uses: actions/checkout@v4
   with:
+    ref: ${{ github.head_ref || github.ref_name }}
     fetch-depth: 0
 ```
+
+Runtime event behavior:
+
+- `pull_request` runs pass PR base/head SHAs into ML1, so ML1 compares PR base vs PR head.
+- `push` runs (for example direct push to `main`) use implemented fallback diff behavior when explicit base/head SHAs are not provided.
+- `workflow_dispatch` runs also use implemented fallback behavior when explicit base/head SHAs are absent.
+
+`fetch-depth: 0` is strongly recommended to keep diff resolution reliable.
 
 ## ML1 Input Parameters
 
@@ -270,10 +279,10 @@ When these checks fail, ML1 reports a FAILED outcome and exits non-zero.
 
 During model evaluation, ROC-AUC may be unavailable for specific splits (for example, single-class target distributions). In that case, ML1 records ROC-AUC as unavailable instead of writing a misleading `0.0`.
 
-### PR behavior differs from push behavior
+### PR behavior differs from push/manual behavior
 
-- PR uses base/head refs.
-- Push often uses HEAD~1...HEAD fallback.
+- PR uses explicit base/head refs from GitHub event context.
+- Push/manual runs use fallback diff behavior when explicit refs are absent.
 - Ensure sufficient git history exists on runner.
 
 ## Suggested Operational Defaults

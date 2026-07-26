@@ -45,8 +45,8 @@ flowchart TD
 -   Composite GitHub Action integration for end-to-end CI/CD execution.
 -   Explainable report artifacts with counts, reasons, and concise issue
     summaries.
--   Optional persistence of ML3 historical state to the consuming
-    repository.
+-   Optional ML3 state persistence path for workflows explicitly designed
+    to allow non-main push write-back.
 
 ## Repository Structure
 
@@ -175,8 +175,24 @@ automatically.
 ``` yaml
 - uses: actions/checkout@v4
   with:
+    ref: ${{ github.head_ref || github.ref_name }}
     fetch-depth: 0
 ```
+
+Recommended workflow trigger policy is documented in
+`doc/Github/template/run-ai-devsecops-security-scan.yml`.
+
+Under that default template:
+
+- pull requests targeting `main` run preventively,
+- direct pushes to `main` run reactively,
+- manual runs use `workflow_dispatch`, and
+- feature-branch pushes without an open PR do not auto-run.
+
+ML3 persistence in `action.yml` requires push events on non-main branches
+plus `ml3-persist-state=true`. Because the default template auto-runs
+push only on `main`, automatic ML3 state write-back is not reached unless
+you intentionally design an alternate workflow for that purpose.
 
 ### Git LFS
 

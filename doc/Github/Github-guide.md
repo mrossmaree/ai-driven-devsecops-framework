@@ -1,80 +1,28 @@
-# GitHub Setup Guide for Test Repositories
+# GitHub Setup Guide for Consuming Repositories
 
-This guide explains how to use the framework template and configure GitHub settings so security checks work correctly for both direct pushes and pull requests.
+This guide explains how to run the framework safely in GitHub Actions with clear pull-request, direct-main-push, and manual-dispatch behavior.
 
 ## 1. Use the Workflow Template
 
-Template file in this repository:
+Template in this repository:
 
 - [doc/Github/template/run-ai-devsecops-security-scan.yml](doc/Github/template/run-ai-devsecops-security-scan.yml)
 
-In your test repository, create:
+In your consuming repository, create:
 
 - `.github/workflows/security.yml`
 
 Copy the template content into that file.
 
-## 2. What Your Workflow Must Include
+## 2. Trigger Policy in the Template
 
-### Required triggers
-
-- `push` on `main` for reactive detection.
-- `pull_request` for preventive gating.
-- optional `workflow_dispatch` for manual testing.
-
-### Required checkout behavior
-
-Use:
+The default template is intentionally scoped to avoid duplicate feature-branch push runs.
 
 ```yaml
-- uses: actions/checkout@v4
-  with:
-    fetch-depth: 0
-```
-
-This is important because ML1 uses git diff history for changed file and changed function analysis.
-
-### Required framework call
-
-```yaml
-- name: Run AI DevSecOps Framework
-  uses: mrossmaree/ai-driven-devsecops-framework@main
-  with:
-    scan-path: "."
-```
-
-## 3. Validation of Your Previous Snippet
-
-Your previous setup direction is correct overall. These are the important corrections and confirmations:
-
-1. Path filters
-- Use `**/*.c` not `**.c`.
-- Same for all extensions: `**/*.cpp`, `**/*.cc`, `**/*.cxx`, `**/*.h`, `**/*.hpp`.
-
-2. Input names
-- Use the current action input names from [action.yml](action.yml):
-  - `ml1-high-threshold`
-  - `ml1-medium-threshold`
-  - `ml1-review-confidence-threshold`
-  - `ml3-min-rows`
-- Do not use old names like `risk-threshold-high`, `risk-threshold-medium`, or `confidence-threshold` because those are not defined inputs.
-
-3. Permissions
-- If you want ML3 state persistence commit behavior on non-main push runs, use:
-  - `permissions: contents: write`
-- If you do not want automated write-back behavior, you can use read-only permissions, but ML3 persistence step will not be able to push updates.
-
-4. Job name for required check
-- If your job is named `security-scan`, your branch protection required check should match that exact check name.
-
-## 4. Recommended Test Repo Workflow
-
-```yaml
-name: security-scan
-
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '**/*.c'
       - '**/*.cpp'
@@ -84,6 +32,8 @@ on:
       - '**/*.hpp'
 
   pull_request:
+    branches:
+      - main
     paths:
       - '**/*.c'
       - '**/*.cpp'
@@ -93,104 +43,90 @@ on:
       - '**/*.hpp'
 
   workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  security-scan:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout target project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      - name: Run AI DevSecOps Framework
-        uses: mrossmaree/ai-driven-devsecops-framework@main
-        with:
-          scan-path: "."
-          ml3-min-rows: "5"
-          # Optional ML1 tuning:
-          # ml1-high-threshold: "70"
-          # ml1-medium-threshold: "40"
-          # ml1-review-confidence-threshold: "0.2"
 ```
 
-## 5. GitHub Branch Protection Settings
+### Trigger Table
 
-Configure in the test repo:
+| User action | Automatic run? | Event |
+|---|---|---|
+| Push C/C++ change directly to `main` | Yes | `push` |
+| Push documentation-only change to `main` | No | path filter blocks |
+| Open PR to `main` with C/C++ changes | Yes | `pull_request` |
+| Push new C/C++ commit to branch with open PR to `main` | Yes | `pull_request` (`synchronize`) |
+| Push to feature branch without open PR | No | none |
+| Start manually from Actions | Yes | `workflow_dispatch` |
 
-- Settings -> Rules -> Rulesets or Branch protection -> `main`
+Notes:
 
-Enable:
+- `push.branches: main` applies to direct pushes into `main` only.
+- `pull_request.branches: main` matches the PR base/target branch, not the source branch name.
+- A feature-branch update with an open PR to `main` triggers via PR synchronization.
+- A feature-branch update without an open PR does not trigger this default workflow.
 
-- Require a pull request before merging
-- Require status checks to pass before merging
-- Require branches to be up to date before merging
-- Required check: `security-scan`
+## 3. Composite Action Responsibility
 
-This is what prevents merging when framework decision is `BLOCK` on PR workflows.
+- [action.yml](action.yml) defines a **composite action** and runtime steps.
+- [action.yml](action.yml) does **not** define workflow start events.
+- Event triggers belong to the consuming repository workflow (`on:` block).
+- GitHub event context (`github.*`) is passed into the composite action at runtime by Actions.
 
-## 6. Direct Push vs Pull Request Behavior
+## 4. Checkout Configuration
 
-### Direct push to main
+Template checkout:
 
-- Commit is already integrated.
-- Framework runs and can fail CI if decision is `BLOCK`.
-- This is reactive detection.
+```yaml
+- uses: actions/checkout@v4
+  with:
+    ref: ${{ github.head_ref || github.ref_name }}
+    fetch-depth: 0
+```
 
-### Pull request
+This is preserved intentionally because it provides the needed branch/ref behavior:
 
-- Framework runs before merge.
-- If decision is `BLOCK`, check fails.
-- With required checks enabled, merge is prevented.
-- This is preventive governance.
+- `pull_request`: checks out PR head branch (`github.head_ref`).
+- `push`: checks out pushed branch (`github.ref_name`, `main` in default template).
+- `workflow_dispatch`: checks out selected branch/ref (`github.ref_name`).
 
-## 7. ML3 State Commit Policy
+`fetch-depth: 0` is strongly recommended for ML1 diff reliability.
 
-Recommended practice:
+## 5. ML1 Event and Diff Behavior
 
-- Do not rely on PR runs to commit ML3 history.
-- Allow ML3 persistence only for push-based runs where appropriate.
+ML1 receives runtime context from the composite action:
 
-The framework already limits ML3 persistence to push events on non-main branches.
+- `pull_request`: base and head SHAs are passed from PR context.
+- `push`: predictor uses implemented fallback comparison when explicit base/head are not provided.
+- `workflow_dispatch`: also uses implemented fallback behavior when explicit base/head are absent.
 
-## 8. Trigger Expectations
+Operational requirement:
 
-Because triggers use C/C++ path filters:
+- Keep `fetch-depth: 0` for reliable diff resolution and changed-function analysis.
 
-- C/C++ changes trigger workflow.
-- README/docs-only changes do not trigger workflow.
+## 6. Branch Protection and Gate Semantics
 
-## 9. Suggested Validation Order
+- Pull-request scans run before merge and are preventive.
+- Direct pushes to `main` are reactive and run after integration.
+- `BLOCK` fails the workflow.
+- Merge prevention on PR depends on branch protection requiring the workflow check.
+- `BLOCK` does not auto-revert direct pushes.
+- `REVIEW` does not block merges by itself unless repository policy explicitly treats it as blocking.
 
-Run these in your test repo:
+## 7. ML3 Persistence and Default Template
 
-1. Safe C/C++ change -> expect PASS.
-2. Medium-risk change -> expect REVIEW.
-3. High-risk vulnerable change -> expect BLOCK.
-4. Non-C/C++ change only -> workflow skipped.
+Current persistence step in [action.yml](action.yml):
 
-## 10. Quick Troubleshooting
+- event is `push`
+- branch is not `main`
+- `ml3-persist-state` is `true`
 
-### Workflow not triggered
+With the default template (pushes only to `main` plus PR and manual runs), that persistence condition is not reached automatically.
 
-- Check event filters and path patterns.
-- Ensure changed files match configured extensions.
+Implication for the frozen framework:
 
-### PR merged despite security issue
+- `ml3-persist-state` remains `false` by default.
+- No automatic ML3 state write-back occurs under the default template.
+- Enabling persistence requires an intentional non-main push workflow or a separate state-management design.
+- PR safety is preserved because no state commit/push occurs on `pull_request` runs.
 
-- Verify branch protection requires the correct check name.
-- Verify job/check name matches `security-scan`.
+## 8. Required Status Check
 
-### ML1 seems skipped unexpectedly
-
-- Ensure `fetch-depth: 0` is set.
-- Ensure commit history exists for diff resolution.
-
-### Input not applied
-
-- Confirm input key names match [action.yml](action.yml).
+If your job name is `security-scan`, configure branch protection to require that exact check name.

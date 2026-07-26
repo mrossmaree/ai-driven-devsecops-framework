@@ -62,6 +62,24 @@ End-to-end ML3 runtime order in the GitHub action:
 4. Optional persistence step commits .devsecops/anomaly_detection state back to the branch when ml3-persist-state is true and workflow conditions match.
 5. security_decision_engine.py consumes anomaly_report.csv with ML1/ML2 outputs and issues final decision.
 
+### Persistence condition and default template behavior
+
+The persistence step in `action.yml` is gated by all of the following:
+
+- `github.event_name == 'push'`
+- `github.ref_name != 'main'`
+- `inputs.ml3-persist-state == 'true'`
+
+With the default consuming workflow template (`push` scoped to `main`, plus
+`pull_request` to `main` and `workflow_dispatch`), this condition is not
+normally reached automatically.
+
+Practical implication for the frozen implementation:
+
+- default behavior is no automatic ML3 state commit/push back;
+- persistence requires an intentionally different non-main push workflow design;
+- PR runs remain safe from ML3 state write-back.
+
 ## Training
 
 ### History
@@ -351,7 +369,7 @@ Operational guidance for generated artifacts:
 - reports runtime outputs are generated artifacts.
 - data/raw, data/intermediate, data/processed, and data/features are ignored as generated/training data paths in this repository.
 
-When ml3-persist-state is enabled in action inputs and workflow conditions are met, .devsecops/anomaly_detection state is intentionally committed and pushed by the action for longitudinal ML3 history.
+When ml3-persist-state is enabled in action inputs and workflow conditions are met, .devsecops/anomaly_detection state is intentionally committed and pushed by the action for longitudinal ML3 history. Under the default workflow template, those conditions are not usually met automatically.
 
 ## Final Workflow Diagram
 

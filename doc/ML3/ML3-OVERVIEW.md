@@ -47,6 +47,17 @@ Exact execution order in the action pipeline:
 4. Persist historical state (optional, gated by workflow inputs and branch/event conditions).
 5. Run Security Decision Engine.
 
+Persistence gate in `action.yml` requires:
+
+- `push` event
+- non-main branch (`github.ref_name != 'main'`)
+- `ml3-persist-state == true`
+
+With the default consuming template (`push` on `main`, `pull_request` to
+`main`, plus `workflow_dispatch`), automatic ML3 state write-back is not
+normally reached unless a separate non-main push persistence workflow is
+intentionally designed.
+
 Important design detail: the current run metrics are generated first but are not appended to historical state until anomaly detection finalisation. This prevents self-inclusion of the row being scored.
 
 ## Assumptions
