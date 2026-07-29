@@ -213,8 +213,12 @@ def validate_runtime_environment():
         raise RuntimeError("Clang scan status indicates analyzer execution/configuration failure.")
 
     if not html_reports and not plist_reports:
-        if scan_status == "SCAN_COMPLETED_NO_SOURCE":
+        if scan_status in {
+            "SCAN_COMPLETED_NO_SOURCE",
+            "SCAN_COMPLETED_NO_FINDINGS",
+        }:
             return html_reports, scan_status
+
         raise RuntimeError(
             "No valid Clang analyzer outputs found. "
             "Expected report-*.html or *.plist files in reports/clang-report/."
@@ -393,10 +397,14 @@ def main():
 
         if df.empty:
             print("COMPLETED WITH ZERO ALERTS")
+
             if scan_status == "SCAN_COMPLETED_NO_SOURCE":
                 print("Clang scan completed with no C/C++ source files to analyze.")
+            elif scan_status == "SCAN_COMPLETED_NO_FINDINGS":
+                print("Clang analyzer completed successfully with no findings.")
             else:
                 print("Valid Clang report structure found, but no usable alerts were parsed.")
+
             return
 
         print("COMPLETED WITH ALERTS")
