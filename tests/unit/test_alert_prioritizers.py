@@ -135,14 +135,56 @@ def test_clang_report_write_schema_and_ranking(tmp_path, monkeypatch):
 
     df = pd.DataFrame(
         [
-            {"priority": "LOW", "tool": "clang", "file": "x.c", "line": 3, "alert_id": "clang-static-analyzer", "cwe": "", "severity": "warning", "message": "m"},
-            {"priority": "HIGH", "tool": "clang", "file": "y.c", "line": 8, "alert_id": "clang-static-analyzer", "cwe": "", "severity": "warning", "message": "n"},
+            {
+                "priority": "LOW",
+                "tool": "clang",
+                "file": "x.c",
+                "line": 3,
+                "column": 4,
+                "alert_id": "clang-static-analyzer",
+                "category": "Logic error",
+                "diagnostic_type": "Dead store",
+                "cwe": "",
+                "severity": "warning",
+                "message": "m",
+                "path_length": 1,
+            },
+            {
+                "priority": "HIGH",
+                "tool": "clang",
+                "file": "y.c",
+                "line": 8,
+                "column": 2,
+                "alert_id": "clang-static-analyzer",
+                "category": "Memory error",
+                "diagnostic_type": "Null pointer dereference",
+                "cwe": "476",
+                "severity": "warning",
+                "message": "n",
+                "path_length": 5,
+            },
         ]
     )
+
     clang.write_prioritised_alerts(df)
 
     written = pd.read_csv(out)
-    assert list(written.columns) == ["priority", "tool", "file", "line", "alert_id", "cwe", "severity", "message"]
+
+    assert list(written.columns) == [
+        "priority",
+        "tool",
+        "file",
+        "line",
+        "column",
+        "alert_id",
+        "category",
+        "diagnostic_type",
+        "cwe",
+        "severity",
+        "message",
+        "path_length",
+    ]
+
     assert list(written["priority"]) == ["HIGH", "LOW"]
 
 
