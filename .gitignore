@@ -26,6 +26,7 @@ reports/**
 # ML3
 !reports/anomaly_detection/
 !reports/anomaly_detection/.gitkeep
+.devsecops/
 
 # Python
 __pycache__/

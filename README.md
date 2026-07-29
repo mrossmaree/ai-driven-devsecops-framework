@@ -18,9 +18,6 @@ runtime components in a single CI/CD workflow:
 -   ML3 pipeline anomaly detection
 -   Security Decision Engine
 
-The implementation is frozen and designed around generated reports as
-the contract between components, allowing deterministic, auditable
-security decisions during pull request and push workflows.
 
 ## Framework Architecture
 
@@ -45,8 +42,8 @@ flowchart TD
 -   Composite GitHub Action integration for end-to-end CI/CD execution.
 -   Explainable report artifacts with counts, reasons, and concise issue
     summaries.
--   Optional ML3 state persistence path for workflows explicitly designed
-    to allow non-main push write-back.
+-   Repository-specific ML3 state persistence on the dedicated
+    `devsecops-state` branch.
 
 ## Repository Structure
 
@@ -73,10 +70,12 @@ below.
 3.  Run ML1 commit risk prediction.
 4.  Run ML2 Cppcheck alert prioritization.
 5.  Run ML2 Clang alert prioritization.
-6.  Run ML3 metrics collection, model training/update, and anomaly
-    detection.
-7.  Optionally persist ML3 state under `.devsecops/anomaly_detection`.
-8.  Run the Security Decision Engine and emit the final decision report.
+6.  Restore ML3 state from `devsecops-state` when available.
+7.  Collect ML3 current pipeline metrics.
+8.  Run ML3 inference before history append.
+9.  Append trusted metrics, train/retrain when due, and update metadata.
+10. Persist updated ML3 state to `devsecops-state`.
+11. Run the Security Decision Engine and emit the final decision report.
 9.  Upload generated artifacts.
 
 ## Components
@@ -93,6 +92,22 @@ Prioritises Cppcheck and Clang static-analysis alerts.
 
 Performs repository-specific anomaly detection using historical pipeline
 metrics.
+
+ML3 performs repository-specific CI/CD pipeline anomaly detection.
+The framework does not distribute a pre-trained ML3 model because normal
+pipeline behaviour differs between repositories.
+Each consuming repository builds its own trusted historical baseline and
+Isolation Forest model.
+Generated ML3 state is stored in the `devsecops-state` branch rather than
+`main`.
+ML3 reports `NOT_AVAILABLE` during the bootstrap period until 30 trusted
+executions have been collected.
+Initial training occurs at 30 records, and detection begins from the next
+qualifying execution.
+The model is automatically retrained after every additional 20 trusted
+records by default.
+
+See the full implementation details in `doc/ML3/ML3-GUIDE.md`.
 
 ### Security Decision Engine
 
@@ -189,10 +204,9 @@ Under that default template:
 - manual runs use `workflow_dispatch`, and
 - feature-branch pushes without an open PR do not auto-run.
 
-ML3 persistence in `action.yml` requires push events on non-main branches
-plus `ml3-persist-state=true`. Because the default template auto-runs
-push only on `main`, automatic ML3 state write-back is not reached unless
-you intentionally design an alternate workflow for that purpose.
+ML3 state updates are trusted-main only and are written to the dedicated
+`devsecops-state` branch. Pull-request, manual, and feature-branch runs
+are read-only with respect to shared ML3 history.
 
 ### Git LFS
 
@@ -294,14 +308,17 @@ The preparation process includes:
 1. Collecting metrics from ML1 and ML2 runtime reports.
 2. Storing valid historical pipeline records in CSV format.
 3. Filtering invalid, failed, or incomplete historical records.
-4. Training anomaly detection models when the minimum number of valid rows is available.
-5. Evaluating the selected anomaly detection approach using generated evaluation reports.
+4. Training an Isolation Forest model when trusted-history thresholds are reached.
+5. Retraining after each configured trusted-history interval.
 
 Relevant scripts and documentation:
 
 * `ml/anomaly_detection/pipeline_metrics_collector.py`
+* `ml/anomaly_detection/feature_preprocessor.py`
 * `ml/anomaly_detection/train_anomaly_model.py`
 * `ml/anomaly_detection/anomaly_detector.py`
+* `ml/anomaly_detection/ml3_state_manager.py`
+* `ml/anomaly_detection/ml3_orchestrator.py`
 * `doc/ML3/ML3-GUIDE.md`
 * `doc/ML3/ML3-OVERVIEW.md`
 

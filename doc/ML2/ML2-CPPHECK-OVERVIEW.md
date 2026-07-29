@@ -184,8 +184,5 @@ ML2 Cppcheck provides the framework’s alert-level prioritisation layer. It com
 
 ## Summary
 
-ML2 Cppcheck is implemented as an end-to-end alert prioritisation workflow with reproducible training artifacts, validation-led model selection, and robust runtime outcome semantics. In its frozen state, the component is deployment-ready, operationally validated, and suitable for integration into automated DevSecOps CI/CD pipelines.
+ML2 Cppcheck is implemented as an end-to-end alert prioritisation workflow with reproducible training artifacts, validation-led model selection, and robust runtime outcome semantics.
 
-## Future Work
-
-- Support prioritisation of additional static analysis tools beyond Cppcheck.

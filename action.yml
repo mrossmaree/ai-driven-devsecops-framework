@@ -18,14 +18,22 @@ inputs:
     description: "ML1 confidence threshold (0-1) below which risk_level becomes REVIEW_REQUIRED"
     required: false
     default: "0.2"
-  ml3-min-rows:
-    description: "Minimum historical ML3 rows required before anomaly model training"
+  ml3-minimum-history:
+    description: "Minimum trusted historical ML3 rows required before initial model training"
     required: false
     default: "30"
-  ml3-persist-state:
-    description: "Whether to commit and push ML3 state back to the consuming repository"
+  ml3-retraining-interval:
+    description: "Additional trusted historical rows between ML3 retraining cycles"
     required: false
-    default: "false"
+    default: "20"
+  ml3-contamination:
+    description: "IsolationForest contamination used for ML3 training and inference"
+    required: false
+    default: "0.1"
+  ml3-state-branch:
+    description: "Branch that stores persistent repository-specific ML3 state"
+    required: false
+    default: "devsecops-state"
 
 runs:
   using: "composite"
@@ -53,7 +61,7 @@ runs:
         mkdir -p reports/alert_prioritizer/clang
         mkdir -p reports/anomaly_detection
         mkdir -p reports/final_decision
-        mkdir -p .devsecops/anomaly_detection
+        mkdir -p .devsecops/anomaly_detection/models
 
     - name: Run Cppcheck static analysis
       shell: bash
@@ -197,43 +205,146 @@ runs:
       run: |
         python3 "$GITHUB_ACTION_PATH/ml/alert_prioritizer/clang/clang_prioritizer.py"
 
+    - name: Restore ML3 state from dedicated state branch
+      shell: bash
+      env:
+        ML3_STATE_BRANCH: ${{ inputs.ml3-state-branch }}
+      run: |
+        set -euo pipefail
+        mkdir -p .devsecops/anomaly_detection/models
+
+        if git ls-remote --exit-code --heads origin "$ML3_STATE_BRANCH" >/dev/null 2>&1; then
+          git fetch --no-tags origin "$ML3_STATE_BRANCH"
+
+          for state_path in \
+            .devsecops/anomaly_detection/pipeline_metrics.csv \
+            .devsecops/anomaly_detection/models/anomaly_model.pkl \
+            .devsecops/anomaly_detection/models/anomaly_model_metadata.json; do
+            if git cat-file -e "origin/$ML3_STATE_BRANCH:$state_path" 2>/dev/null; then
+              mkdir -p "$(dirname "$state_path")"
+              git show "origin/$ML3_STATE_BRANCH:$state_path" > "$state_path"
+            fi
+          done
+        else
+          echo "ML3 state branch '$ML3_STATE_BRANCH' does not exist yet. Bootstrap mode."
+        fi
+
     - name: Collect ML3 pipeline metrics
       shell: bash
       run: |
         python3 "$GITHUB_ACTION_PATH/ml/anomaly_detection/pipeline_metrics_collector.py"
 
-    - name: Train ML3 anomaly detection models
+    - name: Run ML3 orchestration (inference before append and training)
       shell: bash
       env:
-        ML3_MIN_ROWS: ${{ inputs.ml3-min-rows }}
+        ML3_MINIMUM_HISTORY: ${{ inputs.ml3-minimum-history }}
+        ML3_RETRAINING_INTERVAL: ${{ inputs.ml3-retraining-interval }}
+        ML3_CONTAMINATION: ${{ inputs.ml3-contamination }}
       run: |
-        python3 "$GITHUB_ACTION_PATH/ml/anomaly_detection/train_anomaly_model.py"
+        python3 "$GITHUB_ACTION_PATH/ml/anomaly_detection/ml3_orchestrator.py"
 
-    - name: Run ML3 anomaly detection
+    - name: Persist ML3 state to dedicated state branch
       shell: bash
+      continue-on-error: true
+      env:
+        ML3_STATE_BRANCH: ${{ inputs.ml3-state-branch }}
       run: |
-        python3 "$GITHUB_ACTION_PATH/ml/anomaly_detection/anomaly_detector.py"
+        set -euo pipefail
 
-    - name: Persist ML3 state in target repository
-      if: github.event_name == 'push' && github.ref_name != 'main' && inputs.ml3-persist-state == 'true'
-      shell: bash
-      run: |
-        if [ -d ".devsecops/anomaly_detection" ]; then
+        if [ ! -f reports/anomaly_detection/anomaly_report.csv ]; then
+          echo "No ML3 anomaly report produced; skipping state persistence."
+          exit 0
+        fi
+
+        SHOULD_PERSIST=$(python3 - <<'PY'
+import pandas as pd
+from pathlib import Path
+
+report_file = Path("reports/anomaly_detection/anomaly_report.csv")
+if not report_file.exists():
+    print("false")
+    raise SystemExit(0)
+
+df = pd.read_csv(report_file)
+if df.empty:
+    print("false")
+    raise SystemExit(0)
+
+row = df.iloc[0]
+print("true" if bool(row.get("state_persistence_required", False)) else "false")
+PY
+        )
+
+        if [ "$SHOULD_PERSIST" != "true" ]; then
+          echo "ML3 state persistence not required for this execution context."
+          exit 0
+        fi
+
+        for required in \
+          .devsecops/anomaly_detection/pipeline_metrics.csv \
+          .devsecops/anomaly_detection/models/anomaly_model.pkl \
+          .devsecops/anomaly_detection/models/anomaly_model_metadata.json; do
+          if [ ! -f "$required" ]; then
+            echo "Required ML3 state file missing: $required"
+            python3 - <<'PY'
+import pandas as pd
+from pathlib import Path
+
+report_file = Path("reports/anomaly_detection/anomaly_report.csv")
+if report_file.exists():
+    df = pd.read_csv(report_file)
+    if not df.empty:
+        df.loc[0, "anomaly_status"] = "FAILED"
+        df.loc[0, "reason"] = "ML3 state persistence failed"
+        df.loc[0, "failure_reason"] = "STATE_FILE_MISSING"
+        df.to_csv(report_file, index=False)
+PY
+            exit 1
+          fi
+        done
+
+        STATE_WORKTREE="$(mktemp -d)"
+        cleanup() {
+          git worktree remove "$STATE_WORKTREE" --force >/dev/null 2>&1 || true
+          rm -rf "$STATE_WORKTREE" >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+
+        if git ls-remote --exit-code --heads origin "$ML3_STATE_BRANCH" >/dev/null 2>&1; then
+          git fetch --no-tags origin "$ML3_STATE_BRANCH"
+          git worktree add "$STATE_WORKTREE" "origin/$ML3_STATE_BRANCH"
+        else
+          git worktree add --detach "$STATE_WORKTREE"
+          (
+            cd "$STATE_WORKTREE"
+            git checkout --orphan "$ML3_STATE_BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+          )
+        fi
+
+        mkdir -p "$STATE_WORKTREE/.devsecops/anomaly_detection/models"
+        cp -f .devsecops/anomaly_detection/pipeline_metrics.csv "$STATE_WORKTREE/.devsecops/anomaly_detection/pipeline_metrics.csv"
+        cp -f .devsecops/anomaly_detection/models/anomaly_model.pkl "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model.pkl"
+        cp -f .devsecops/anomaly_detection/models/anomaly_model_metadata.json "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model_metadata.json"
+
+        (
+          cd "$STATE_WORKTREE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add .devsecops/anomaly_detection/
+          git add .devsecops/anomaly_detection/pipeline_metrics.csv
+          git add .devsecops/anomaly_detection/models/anomaly_model.pkl
+          git add .devsecops/anomaly_detection/models/anomaly_model_metadata.json
 
           if git diff --cached --quiet; then
-            echo "No ML3 state changes to commit."
-          else
-            git commit -m "Update ML3 anomaly detection state"
-            CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-            git push origin HEAD:$CURRENT_BRANCH
+            echo "No ML3 state changes to persist."
+            exit 0
           fi
-        else
-          echo "No ML3 state directory found."
-        fi
+
+          git commit -m "chore(ml3): update anomaly detection state"
+          git push origin "HEAD:$ML3_STATE_BRANCH"
+        )
+
+        echo "ML3 state persisted to branch '$ML3_STATE_BRANCH'."
 
     - name: Run final security decision engine
       shell: bash
@@ -310,30 +421,6 @@ runs:
       with:
         name: ml3-anomaly-report
         path: reports/anomaly_detection/anomaly_report.csv
-        if-no-files-found: ignore
-
-    - name: Upload ML3 model comparison
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: ml3-model-comparison
-        path: reports/anomaly_detection/anomaly_model_comparison.csv
-        if-no-files-found: ignore
-
-    - name: Upload ML3 synthetic evaluation CSV
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: ml3-synthetic-evaluation-csv
-        path: reports/anomaly_detection/synthetic_evaluation.csv
-        if-no-files-found: ignore
-
-    - name: Upload ML3 synthetic evaluation summary
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: ml3-synthetic-evaluation-summary
-        path: reports/anomaly_detection/synthetic_evaluation_summary.json
         if-no-files-found: ignore
 
     - name: Upload final security decision

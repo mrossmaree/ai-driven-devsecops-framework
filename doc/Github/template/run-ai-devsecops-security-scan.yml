@@ -26,7 +26,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ml3-state-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   security-scan:
@@ -48,4 +52,7 @@ jobs:
           # ml1-high-threshold: "70"
           # ml1-medium-threshold: "40"
           # ml1-review-confidence-threshold: "0.2"
-          # ml3-min-rows: "30"
+          # ml3-minimum-history: "30"
+          # ml3-retraining-interval: "20"
+          # ml3-contamination: "0.1"
+          # ml3-state-branch: "devsecops-state"
