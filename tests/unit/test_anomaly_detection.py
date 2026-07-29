@@ -116,7 +116,7 @@ def _write_model_and_metadata(model_path: Path, metadata_path: Path, version=1, 
         "features": FEATURE_COLUMNS,
         "contamination": 0.1,
         "random_state": 42,
-        "framework_version": "frozen-ml3-v2",
+        "framework_version": "ml3-v2",
         "model_path": str(model_path),
         "training_status": "TRAINED",
     }

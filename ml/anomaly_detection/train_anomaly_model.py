@@ -82,7 +82,7 @@ def build_metadata(
         "features": FEATURE_COLUMNS,
         "contamination": float(contamination),
         "random_state": 42,
-        "framework_version": str(existing_metadata.get("framework_version", "frozen-ml3-v2")),
+        "framework_version": str(existing_metadata.get("framework_version", "ml3-v2")),
         "model_path": str(MODEL_PATH),
         "training_status": "TRAINED",
     }

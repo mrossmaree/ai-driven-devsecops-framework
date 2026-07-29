@@ -4,9 +4,8 @@ This repository contains an MSc dissertation framework implementing an
 AI-driven DevSecOps pipeline with GitHub Actions for C/C++ security
 analysis. It combines ML1 Commit Risk Prediction, ML2 Static Analysis
 Alert Prioritization, ML3 Pipeline Anomaly Detection, and a Security
-Decision Engine into one integrated workflow. The frozen implementation
-produces deterministic, explainable CI/CD security decisions from
-component reports.
+Decision Engine into one integrated workflow. The framework produces
+deterministic, explainable CI/CD security decisions from component reports.
 
 ## Overview
 
@@ -76,7 +75,7 @@ below.
 9.  Append trusted metrics, train/retrain when due, and update metadata.
 10. Persist updated ML3 state to `devsecops-state`.
 11. Run the Security Decision Engine and emit the final decision report.
-9.  Upload generated artifacts.
+12. Upload generated artifacts.
 
 ## Components
 
@@ -441,15 +440,6 @@ End-to-end behavior is validated through GitHub Actions workflow execution and s
 - push/pull-request workflow runs
 - PASS, REVIEW, and BLOCK outcome cases
 - generated ML1/ML2/ML3 and final decision reports
-
-## Limitations
-
-Only implementation-real limitations are listed.
-
-## Future Enhancements
-
-The following are prospective improvements and are not part of the
-frozen implementation.
 
 ## License
 
