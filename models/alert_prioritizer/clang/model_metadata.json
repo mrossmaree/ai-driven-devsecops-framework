@@ -108,23 +108,33 @@
     "cwe"
   ],
   "candidate_models": [
-    "Logistic Regression",
-    "SVM",
-    "Random Forest",
-    "ANN"
+    "Logistic Regression C=0.1",
+    "Logistic Regression C=1",
+    "Logistic Regression C=10",
+    "SVM C=0.1",
+    "SVM C=1",
+    "SVM C=10",
+    "Random Forest constrained",
+    "Random Forest unrestricted",
+    "ANN 64",
+    "ANN 128-64",
+    "ANN 128-64 regularised"
   ],
-  "selection_metric": "macro_f1 > high_recall > weighted_f1 > accuracy",
-  "selected_model": "ANN",
+  "selection_policy": {
+    "minimum_high_recall": 0.6,
+    "eligibility_rule": "validation high_recall >= minimum_high_recall",
+    "ranking": "macro_f1 > high_recall > lowest high_to_low_count > weighted_f1 > accuracy"
+  },
+  "selected_model": "ANN 64",
   "selected_model_parameters": {
     "activation": "relu",
     "alpha": 0.0001,
     "batch_size": "auto",
     "beta_1": 0.9,
     "beta_2": 0.999,
-    "early_stopping": false,
+    "early_stopping": true,
     "epsilon": 1e-08,
     "hidden_layer_sizes": [
-      128,
       64
     ],
     "learning_rate": "constant",
@@ -147,7 +157,10 @@
     "accuracy": 0.8125874125874126,
     "macro_f1": 0.713579631507971,
     "weighted_f1": 0.8059252448458066,
+    "high_precision": 0.9013840830449827,
     "high_recall": 0.6292270531400966,
+    "high_f1": 0.7411095305832148,
+    "high_to_low_count": 301,
     "confusion_matrix": "[[1196, 17, 57], [21, 26, 0], [301, 6, 521]]",
     "class_0_precision": 0.7878787878787878,
     "class_0_recall": 0.9417322834645669,
@@ -163,11 +176,14 @@
     "class_2_support": 828
   },
   "final_test_metrics": {
-    "model": "ANN",
+    "model": "ANN 64",
     "accuracy": 0.802522836015659,
     "macro_f1": 0.6970778493290114,
     "weighted_f1": 0.7933647490688439,
+    "high_precision": 0.9076376554174067,
     "high_recall": 0.5860091743119266,
+    "high_f1": 0.7121951219512195,
+    "high_to_low_count": 355,
     "confusion_matrix": "[[1308, 20, 52], [21, 26, 0], [355, 6, 511]]",
     "class_0_precision": 0.7767220902612827,
     "class_0_recall": 0.9478260869565217,

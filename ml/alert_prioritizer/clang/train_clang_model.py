@@ -34,6 +34,10 @@ GROUPING_KEY = "juliet_case_id"
 SPLIT_SEED = 42
 LABEL_SET = [0, 1, 2]
 
+# Security-oriented validation requirement. A model must identify at least
+# 60% of the actual HIGH-priority alerts before it is eligible for selection.
+MIN_HIGH_RECALL = 0.60
+
 EXCLUDED_LEAKAGE_FIELDS = [
     "annotation_id",
     "source_file",
@@ -207,8 +211,12 @@ def build_preprocessor():
 def evaluate_predictions(y_true, y_pred):
     metrics = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
-        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
-        "weighted_f1": float(f1_score(y_true, y_pred, average="weighted", zero_division=0)),
+        "macro_f1": float(
+            f1_score(y_true, y_pred, average="macro", zero_division=0)
+        ),
+        "weighted_f1": float(
+            f1_score(y_true, y_pred, average="weighted", zero_division=0)
+        ),
     }
 
     precision, recall, f1, support = precision_recall_fscore_support(
@@ -219,7 +227,13 @@ def evaluate_predictions(y_true, y_pred):
     )
     confusion = confusion_matrix(y_true, y_pred, labels=LABEL_SET)
 
+    metrics["high_precision"] = float(precision[2])
     metrics["high_recall"] = float(recall[2])
+    metrics["high_f1"] = float(f1[2])
+
+    # Rows are actual labels and columns are predicted labels.
+    # Label 2 is HIGH and label 0 is LOW.
+    metrics["high_to_low_count"] = int(confusion[2, 0])
     metrics["confusion_matrix"] = json.dumps(confusion.tolist())
 
     for index, label in enumerate(LABEL_SET):
@@ -231,22 +245,89 @@ def evaluate_predictions(y_true, y_pred):
     return metrics
 
 
-def train_and_select_model(train_df, validation_df):
-    preprocessor = build_preprocessor()
-
-    candidates = {
-        "Logistic Regression": LogisticRegression(max_iter=2000, class_weight="balanced", random_state=SPLIT_SEED),
-        "SVM": LinearSVC(class_weight="balanced", random_state=SPLIT_SEED),
-        "Random Forest": RandomForestClassifier(
-            n_estimators=300,
+def build_candidate_models():
+    """Return a controlled set of representative model configurations."""
+    return {
+        "Logistic Regression C=0.1": LogisticRegression(
+            C=0.1,
+            max_iter=2000,
             class_weight="balanced",
             random_state=SPLIT_SEED,
         ),
-        "ANN": MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=500, random_state=SPLIT_SEED),
+        "Logistic Regression C=1": LogisticRegression(
+            C=1.0,
+            max_iter=2000,
+            class_weight="balanced",
+            random_state=SPLIT_SEED,
+        ),
+        "Logistic Regression C=10": LogisticRegression(
+            C=10.0,
+            max_iter=2000,
+            class_weight="balanced",
+            random_state=SPLIT_SEED,
+        ),
+        "SVM C=0.1": LinearSVC(
+            C=0.1,
+            class_weight="balanced",
+            max_iter=10000,
+            random_state=SPLIT_SEED,
+        ),
+        "SVM C=1": LinearSVC(
+            C=1.0,
+            class_weight="balanced",
+            max_iter=10000,
+            random_state=SPLIT_SEED,
+        ),
+        "SVM C=10": LinearSVC(
+            C=10.0,
+            class_weight="balanced",
+            max_iter=10000,
+            random_state=SPLIT_SEED,
+        ),
+        "Random Forest constrained": RandomForestClassifier(
+            n_estimators=300,
+            max_depth=20,
+            min_samples_split=5,
+            class_weight="balanced",
+            random_state=SPLIT_SEED,
+            n_jobs=-1,
+        ),
+        "Random Forest unrestricted": RandomForestClassifier(
+            n_estimators=300,
+            max_depth=None,
+            min_samples_split=2,
+            class_weight="balanced",
+            random_state=SPLIT_SEED,
+            n_jobs=-1,
+        ),
+        "ANN 64": MLPClassifier(
+            hidden_layer_sizes=(64,),
+            alpha=0.0001,
+            max_iter=500,
+            early_stopping=True,
+            random_state=SPLIT_SEED,
+        ),
+        "ANN 128-64": MLPClassifier(
+            hidden_layer_sizes=(128, 64),
+            alpha=0.0001,
+            max_iter=500,
+            early_stopping=True,
+            random_state=SPLIT_SEED,
+        ),
+        "ANN 128-64 regularised": MLPClassifier(
+            hidden_layer_sizes=(128, 64),
+            alpha=0.001,
+            max_iter=500,
+            early_stopping=True,
+            random_state=SPLIT_SEED,
+        ),
     }
 
+
+def train_and_select_model(train_df, validation_df):
+    candidates = build_candidate_models()
     validation_rows = []
-    best = None
+    eligible_results = []
 
     x_train = train_df[MODEL_FEATURE_COLUMNS]
     y_train = train_df["label"]
@@ -254,9 +335,11 @@ def train_and_select_model(train_df, validation_df):
     y_val = validation_df["label"]
 
     for model_name, model in candidates.items():
+        # Build a separate preprocessor for every candidate. Reusing the same
+        # fitted instance could mutate the pipeline retained as the current best.
         pipeline = Pipeline(
             steps=[
-                ("preprocessor", preprocessor),
+                ("preprocessor", build_preprocessor()),
                 ("classifier", model),
             ]
         )
@@ -265,30 +348,61 @@ def train_and_select_model(train_df, validation_df):
         val_pred = pipeline.predict(x_val)
         metrics = evaluate_predictions(y_val, val_pred)
 
-        row = {"model": model_name, **metrics}
+        is_eligible = metrics["high_recall"] >= MIN_HIGH_RECALL
+        row = {
+            "model": model_name,
+            "eligible": is_eligible,
+            "minimum_high_recall": MIN_HIGH_RECALL,
+            **metrics,
+        }
         validation_rows.append(row)
 
-        selection_key = (
-            metrics["macro_f1"],
-            metrics["high_recall"],
-            metrics["weighted_f1"],
-            metrics["accuracy"],
-        )
-
-        if best is None or selection_key > best["selection_key"]:
-            best = {
-                "model_name": model_name,
-                "pipeline": pipeline,
-                "selection_key": selection_key,
-                "validation_metrics": metrics,
-                "model_params": model.get_params(),
-            }
+        if is_eligible:
+            selection_key = (
+                metrics["macro_f1"],
+                metrics["high_recall"],
+                -metrics["high_to_low_count"],
+                metrics["weighted_f1"],
+                metrics["accuracy"],
+            )
+            eligible_results.append(
+                {
+                    "model_name": model_name,
+                    "pipeline": pipeline,
+                    "selection_key": selection_key,
+                    "validation_metrics": metrics,
+                    "model_params": model.get_params(),
+                }
+            )
 
     validation_df_out = pd.DataFrame(validation_rows)
+    validation_df_out = validation_df_out.sort_values(
+        by=[
+            "eligible",
+            "macro_f1",
+            "high_recall",
+            "high_to_low_count",
+            "weighted_f1",
+            "accuracy",
+        ],
+        ascending=[False, False, False, True, False, False],
+        kind="stable",
+    )
     validation_df_out.to_csv(VALIDATION_RESULTS_OUTPUT, index=False)
 
-    return best, list(candidates.keys()), validation_df_out
+    if not eligible_results:
+        best_observed_recall = float(validation_df_out["high_recall"].max())
+        raise RuntimeError(
+            "No candidate model satisfied the minimum validation HIGH recall "
+            f"of {MIN_HIGH_RECALL:.2f}. Best observed HIGH recall was "
+            f"{best_observed_recall:.4f}. Review the features, class balance, "
+            f"or acceptance threshold. Full results were written to "
+            f"{VALIDATION_RESULTS_OUTPUT}."
+        )
 
+    best = max(eligible_results, key=lambda result: result["selection_key"])
+
+    return best, list(candidates.keys()), validation_df_out
 
 def evaluate_on_test(best_model, test_df):
     x_test = test_df[MODEL_FEATURE_COLUMNS]
@@ -338,7 +452,14 @@ def save_metadata(context, splits, overlap_checks, candidate_models, best_model,
         "feature_columns": MODEL_FEATURE_COLUMNS,
         "excluded_leakage_fields": EXCLUDED_LEAKAGE_FIELDS,
         "candidate_models": candidate_models,
-        "selection_metric": "macro_f1 > high_recall > weighted_f1 > accuracy",
+        "selection_policy": {
+            "minimum_high_recall": MIN_HIGH_RECALL,
+            "eligibility_rule": "validation high_recall >= minimum_high_recall",
+            "ranking": (
+                "macro_f1 > high_recall > lowest high_to_low_count "
+                "> weighted_f1 > accuracy"
+            ),
+        },
         "selected_model": best_model["model_name"],
         "selected_model_parameters": best_model["model_params"],
         "validation_metrics": best_model["validation_metrics"],
@@ -383,7 +504,20 @@ def main():
     print(f"overlap check results: {overlap_checks}")
     print(f"selected model: {best_model['model_name']}")
     print("validation model comparison:")
-    print(validation_table[["model", "accuracy", "macro_f1", "weighted_f1", "high_recall"]])
+    print(
+        validation_table[
+            [
+                "model",
+                "eligible",
+                "accuracy",
+                "macro_f1",
+                "weighted_f1",
+                "high_precision",
+                "high_recall",
+                "high_to_low_count",
+            ]
+        ]
+    )
     print(f"final test metrics: {test_metrics}")
     print(f"model artifact: {MODEL_OUTPUT}")
     print(f"metadata artifact: {METADATA_OUTPUT}")
