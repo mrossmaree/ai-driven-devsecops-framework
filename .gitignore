@@ -1,97 +1,51 @@
-# -------------------------
 # Training datasets
-# -------------------------
 data/raw/
 data/intermediate/
 data/processed/
-
-# -------------------------
-# Generated feature matrices
-# -------------------------
 data/features/
 
-# -------------------------
 # Generated reports
-# -------------------------
-
-# Ignore all generated report files by default
 reports/**
-
-# Keep the reports directory structure
 !reports/
 !reports/.gitkeep
 
-# Keep final ML1 evaluation artifacts
+# ML1 evaluation
 !reports/commit_risk/
 !reports/commit_risk/validation_model_comparison.csv
 !reports/commit_risk/test_evaluation.csv
 
-# Keep final ML2 Cppcheck evaluation artifacts
+# ML2 evaluation
 !reports/alert_prioritizer/
 !reports/alert_prioritizer/cppcheck/
 !reports/alert_prioritizer/cppcheck/validation_model_comparison.csv
 !reports/alert_prioritizer/cppcheck/test_evaluation.csv
-
-# Keep final ML2 Clang evaluation artifacts when generated
 !reports/alert_prioritizer/clang/
 !reports/alert_prioritizer/clang/validation_model_comparison.csv
 !reports/alert_prioritizer/clang/test_evaluation.csv
 
-# Keep ML3 evaluation artifacts
-# Keep the ML3 report directory only
+# ML3
 !reports/anomaly_detection/
 !reports/anomaly_detection/.gitkeep
 
-# -------------------------
-# Python cache
-# -------------------------
+# Python
 __pycache__/
-**/__pycache__/
 *.py[cod]
-*.pyc
 .pytest_cache/
-**/.pytest_cache/
 .mypy_cache/
-
-# -------------------------
-# Test and coverage artifacts
-# -------------------------
 .coverage
-.coverage.*
-htmlcov/
-**/htmlcov/
 coverage.xml
-test-results/
-pytest-debug.log
+htmlcov/
 
-# -------------------------
 # Virtual environments
-# -------------------------
 .venv/
 venv/
 env/
 
-# -------------------------
 # IDE
-# -------------------------
 .vscode/
 .idea/
-*.code-workspace
 
-# -------------------------
 # OS files
-# -------------------------
 .DS_Store
-**/.DS_Store
+__MACOSX/
 Thumbs.db
-
-# -------------------------
-# Logs and temporary files
-# -------------------------
-*.log
-*.tmp
-*.bak
-*.swp
-
-.coverage
-.pytest_cache/

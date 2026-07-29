@@ -237,8 +237,6 @@ The repository includes the final trained models required for framework
 execution. Retraining is only necessary to reproduce the experiments
 described in the dissertation.
 
-## Dataset Preparation
-
 The original training datasets are not included in this repository because of their size and, where applicable, dataset licensing and redistribution restrictions.
 
 The repository contains the preprocessing, conversion, feature-engineering, training, and evaluation scripts required to reproduce the machine learning datasets and model artefacts used in the dissertation.

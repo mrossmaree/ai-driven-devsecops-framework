@@ -6,7 +6,7 @@ This guide explains how to run the framework safely in GitHub Actions with clear
 
 Template in this repository:
 
-- [doc/Github/template/run-ai-devsecops-security-scan.yml](doc/Github/template/run-ai-devsecops-security-scan.yml)
+- [workflow template](template/run-ai-devsecops-security-scan.yml)
 
 In your consuming repository, create:
 
@@ -65,8 +65,8 @@ Notes:
 
 ## 3. Composite Action Responsibility
 
-- [action.yml](action.yml) defines a **composite action** and runtime steps.
-- [action.yml](action.yml) does **not** define workflow start events.
+- [composite action](../../action.yml) defines runtime steps.
+- [composite action](../../action.yml) does **not** define workflow start events.
 - Event triggers belong to the consuming repository workflow (`on:` block).
 - GitHub event context (`github.*`) is passed into the composite action at runtime by Actions.
 
@@ -112,7 +112,7 @@ Operational requirement:
 
 ## 7. ML3 Persistence and Default Template
 
-Current persistence step in [action.yml](action.yml):
+Current persistence step in [composite action](../../action.yml):
 
 - event is `push`
 - branch is not `main`
@@ -127,6 +127,22 @@ Implication for the frozen framework:
 - Enabling persistence requires an intentional non-main push workflow or a separate state-management design.
 - PR safety is preserved because no state commit/push occurs on `pull_request` runs.
 
-## 8. Required Status Check
+## 8. Workflow Permissions
+
+The default template should use least privilege:
+
+```yaml
+permissions:
+  contents: read
+```
+
+If you intentionally design a separate ML3 persistence workflow that commits and pushes state, that alternate workflow requires:
+
+```yaml
+permissions:
+  contents: write
+```
+
+## 9. Required Status Check
 
 If your job name is `security-scan`, configure branch protection to require that exact check name.

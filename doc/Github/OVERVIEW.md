@@ -4,14 +4,14 @@ This repository provides a reusable composite action for AI-assisted DevSecOps c
 
 ## Composite Action vs Workflow Triggers
 
-- [action.yml](action.yml) is a composite action definition.
+- [composite action](../../action.yml) is a composite action definition.
 - It defines runtime steps, not workflow start events.
 - Event triggers must be defined in the consuming repository workflow.
 - GitHub event context is injected at runtime into action steps.
 
 ## Default Trigger Model
 
-The default template in [doc/Github/template/run-ai-devsecops-security-scan.yml](doc/Github/template/run-ai-devsecops-security-scan.yml) is designed for three execution paths:
+The default template in [workflow template](template/run-ai-devsecops-security-scan.yml) is designed for three execution paths:
 
 1. Pull request to `main` (preventive).
 2. Direct push to `main` (reactive).
@@ -61,7 +61,7 @@ This supports:
 
 ## ML3 Persistence with Default Template
 
-The persistence condition in [action.yml](action.yml) requires:
+The persistence condition in [composite action](../../action.yml) requires:
 
 - `github.event_name == 'push'`
 - `github.ref_name != 'main'`
@@ -74,3 +74,19 @@ Therefore:
 - default behavior is no automatic ML3 state write-back;
 - persistence requires an intentional non-main push workflow design;
 - PR runs remain safe from state commits.
+
+## Workflow Permissions
+
+The default template should use least privilege with read-only repository access:
+
+```yaml
+permissions:
+  contents: read
+```
+
+An intentionally separate ML3 persistence workflow that commits and pushes state must use:
+
+```yaml
+permissions:
+  contents: write
+```

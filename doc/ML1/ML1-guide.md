@@ -297,6 +297,6 @@ Tune these using your validation results and false positive tolerance.
 
 ## Related Documents
 
-- [doc/ML1/ML1-OVERVIEW.md](doc/ML1/ML1-OVERVIEW.md)
-- [doc/Github/OVERVIEW.md](doc/Github/OVERVIEW.md)
-- [doc/Github/Github-guide.md](doc/Github/Github-guide.md)
+- [ML1 overview](ML1-OVERVIEW.md)
+- [GitHub overview](../Github/OVERVIEW.md)
+- [GitHub guide](../Github/Github-guide.md)
