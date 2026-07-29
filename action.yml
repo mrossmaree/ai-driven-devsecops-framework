@@ -251,70 +251,96 @@ runs:
       run: |
         set -euo pipefail
 
-        if [ ! -f reports/anomaly_detection/anomaly_report.csv ]; then
+        REPORT_FILE="reports/anomaly_detection/anomaly_report.csv"
+        HISTORY_FILE=".devsecops/anomaly_detection/pipeline_metrics.csv"
+        MODEL_FILE=".devsecops/anomaly_detection/models/anomaly_model.pkl"
+        METADATA_FILE=".devsecops/anomaly_detection/models/anomaly_model_metadata.json"
+
+        if [ ! -f "$REPORT_FILE" ]; then
           echo "No ML3 anomaly report produced; skipping state persistence."
           exit 0
         fi
 
-        SHOULD_PERSIST=$(python3 - <<'PY'
-import pandas as pd
-from pathlib import Path
+        SHOULD_PERSIST="$(
+          python3 - "$REPORT_FILE" <<'PY'
+        import sys
+        from pathlib import Path
 
-report_file = Path("reports/anomaly_detection/anomaly_report.csv")
-if not report_file.exists():
-    print("false")
-    raise SystemExit(0)
+        import pandas as pd
 
-df = pd.read_csv(report_file)
-if df.empty:
-    print("false")
-    raise SystemExit(0)
+        report_file = Path(sys.argv[1])
+        if not report_file.exists():
+            print("false")
+            raise SystemExit(0)
 
-row = df.iloc[0]
-print("true" if bool(row.get("state_persistence_required", False)) else "false")
-PY
-        )
+        dataframe = pd.read_csv(report_file)
+        if dataframe.empty:
+            print("false")
+            raise SystemExit(0)
+
+        value = dataframe.iloc[0].get("state_persistence_required", False)
+
+        if isinstance(value, str):
+            should_persist = value.strip().lower() in {"true", "1", "yes"}
+        else:
+            should_persist = bool(value)
+
+        print("true" if should_persist else "false")
+        PY
+        )"
 
         if [ "$SHOULD_PERSIST" != "true" ]; then
           echo "ML3 state persistence not required for this execution context."
           exit 0
         fi
 
-        for required in \
-          .devsecops/anomaly_detection/pipeline_metrics.csv \
-          .devsecops/anomaly_detection/models/anomaly_model.pkl \
-          .devsecops/anomaly_detection/models/anomaly_model_metadata.json; do
-          if [ ! -f "$required" ]; then
-            echo "Required ML3 state file missing: $required"
-            python3 - <<'PY'
-import pandas as pd
-from pathlib import Path
+        if [ ! -f "$HISTORY_FILE" ]; then
+          echo "Required ML3 history file missing: $HISTORY_FILE"
 
-report_file = Path("reports/anomaly_detection/anomaly_report.csv")
-if report_file.exists():
-    df = pd.read_csv(report_file)
-    if not df.empty:
-        df.loc[0, "anomaly_status"] = "FAILED"
-        df.loc[0, "reason"] = "ML3 state persistence failed"
-        df.loc[0, "failure_reason"] = "STATE_FILE_MISSING"
-        df.to_csv(report_file, index=False)
-PY
-            exit 1
-          fi
-        done
+          python3 - "$REPORT_FILE" <<'PY'
+        import sys
+        from pathlib import Path
+
+        import pandas as pd
+
+        report_file = Path(sys.argv[1])
+        if report_file.exists():
+            dataframe = pd.read_csv(report_file)
+            if not dataframe.empty:
+                dataframe.loc[0, "anomaly_status"] = "FAILED"
+                dataframe.loc[0, "reason"] = "ML3 state persistence failed"
+                dataframe.loc[0, "failure_reason"] = "STATE_FILE_MISSING"
+                dataframe.to_csv(report_file, index=False)
+        PY
+
+          exit 1
+        fi
+
+        if [ -f "$MODEL_FILE" ] && [ ! -f "$METADATA_FILE" ]; then
+          echo "ML3 model metadata is missing: $METADATA_FILE"
+          exit 1
+        fi
+
+        if [ -f "$METADATA_FILE" ] && [ ! -f "$MODEL_FILE" ]; then
+          echo "ML3 model file is missing: $MODEL_FILE"
+          exit 1
+        fi
 
         STATE_WORKTREE="$(mktemp -d)"
+
         cleanup() {
           git worktree remove "$STATE_WORKTREE" --force >/dev/null 2>&1 || true
           rm -rf "$STATE_WORKTREE" >/dev/null 2>&1 || true
         }
+
         trap cleanup EXIT
 
         if git ls-remote --exit-code --heads origin "$ML3_STATE_BRANCH" >/dev/null 2>&1; then
           git fetch --no-tags origin "$ML3_STATE_BRANCH"
-          git worktree add "$STATE_WORKTREE" "origin/$ML3_STATE_BRANCH"
+          git worktree add --detach "$STATE_WORKTREE" "origin/$ML3_STATE_BRANCH"
         else
           git worktree add --detach "$STATE_WORKTREE"
+
           (
             cd "$STATE_WORKTREE"
             git checkout --orphan "$ML3_STATE_BRANCH"
@@ -323,17 +349,33 @@ PY
         fi
 
         mkdir -p "$STATE_WORKTREE/.devsecops/anomaly_detection/models"
-        cp -f .devsecops/anomaly_detection/pipeline_metrics.csv "$STATE_WORKTREE/.devsecops/anomaly_detection/pipeline_metrics.csv"
-        cp -f .devsecops/anomaly_detection/models/anomaly_model.pkl "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model.pkl"
-        cp -f .devsecops/anomaly_detection/models/anomaly_model_metadata.json "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model_metadata.json"
+
+        cp -f "$HISTORY_FILE" \
+          "$STATE_WORKTREE/.devsecops/anomaly_detection/pipeline_metrics.csv"
+
+        if [ -f "$MODEL_FILE" ] && [ -f "$METADATA_FILE" ]; then
+          cp -f "$MODEL_FILE" \
+            "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model.pkl"
+
+          cp -f "$METADATA_FILE" \
+            "$STATE_WORKTREE/.devsecops/anomaly_detection/models/anomaly_model_metadata.json"
+        fi
 
         (
           cd "$STATE_WORKTREE"
+
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add .devsecops/anomaly_detection/pipeline_metrics.csv
-          git add .devsecops/anomaly_detection/models/anomaly_model.pkl
-          git add .devsecops/anomaly_detection/models/anomaly_model_metadata.json
+
+          if [ -f .devsecops/anomaly_detection/models/anomaly_model.pkl ]; then
+            git add .devsecops/anomaly_detection/models/anomaly_model.pkl
+          fi
+
+          if [ -f .devsecops/anomaly_detection/models/anomaly_model_metadata.json ]; then
+            git add .devsecops/anomaly_detection/models/anomaly_model_metadata.json
+          fi
 
           if git diff --cached --quiet; then
             echo "No ML3 state changes to persist."
