@@ -46,7 +46,7 @@ security_decision_engine.py attempts to load:
 - reports/alert_prioritizer/clang/prioritised-alerts.csv
 - reports/anomaly_detection/anomaly_report.csv
 
-load_report behavior:
+load_report behaviour:
 
 - missing file -> empty DataFrame and log message
 - parse error -> empty DataFrame and log message

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The automated tests validate deterministic software behavior and report contracts across the framework runtime components. They are intentionally focused and compact for reproducibility and maintainability in an MSc research implementation.
+The automated tests validate deterministic software behaviour and report contracts across the framework runtime components. They are intentionally focused and compact for reproducibility and maintainability in an MSc research implementation.
 
 ## Test Directory Structure
 
@@ -28,10 +28,10 @@ tests/
 
 ## Scope Covered by Automated Tests
 
-- ML1 thresholding, confidence-gating behavior, changed-file filtering, git/error boundaries, changed-function extraction, fallback behavior, inference path through `predict_proba`, schema contract, and risk aggregation precedence.
+- ML1 thresholding, confidence-gating behaviour, changed-file filtering, git/error boundaries, changed-function extraction, fallback behaviour, inference path through `predict_proba`, schema contract, and risk aggregation precedence.
 - ML2 report parsing, missing/malformed input policies, empty/no-findings handling, priority assignment, deterministic ranking, and output schema/report writing.
-- ML3 pipeline-metrics schema, missing-model/insufficient-history behavior, normal/anomalous outcomes using deterministic controlled fixtures, malformed input handling, report schema, and duplicate history append prevention.
-- Decision Engine PASS/REVIEW/BLOCK semantics, precedence, missing/failed component policy, combined counts, final decision schema, and CLI exit behavior.
+- ML3 pipeline-metrics schema, missing-model/insufficient-history behaviour, normal/anomalous outcomes using deterministic controlled fixtures, malformed input handling, report schema, and duplicate history append prevention.
+- Decision Engine PASS/REVIEW/BLOCK semantics, precedence, missing/failed component policy, combined counts, final decision schema, and CLI exit behaviour.
 - Lightweight integration/contract checks proving ML1/ML2/ML3 report schemas are accepted by the Decision Engine and produce representative PASS/REVIEW/BLOCK outcomes.
 
 ## What Is Intentionally Not Unit Tested

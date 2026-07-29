@@ -67,7 +67,7 @@ Defaults:
 - minimum history: 30 trusted records
 - retraining interval: 20 trusted records
 
-Bootstrap behavior:
+Bootstrap behaviour:
 
 - Records 1-29: append trusted row, no training, `anomaly_status=NOT_AVAILABLE`, `reason=INSUFFICIENT_HISTORY`.
 - Record 30: append trusted row, train initial model, still `NOT_AVAILABLE` for that run.
@@ -131,7 +131,7 @@ ML3 statuses:
 - `NOT_AVAILABLE`: bootstrap phase without trained model.
 - `FAILED`: operational or validation failure.
 
-Operational failures are never treated as normal behavior.
+Operational failures are never treated as normal behaviour.
 
 ## Metadata
 
@@ -182,7 +182,7 @@ Inspect state branch contents in the consuming repository:
 - checkout `devsecops-state`
 - inspect `.devsecops/anomaly_detection/`
 
-Reset behavior should be done intentionally by maintainers on the state branch, not by workflow runs on PR/manual events.
+Reset behaviour should be done intentionally by maintainers on the state branch, not by workflow runs on PR/manual events.
 
 ## Local Testing
 

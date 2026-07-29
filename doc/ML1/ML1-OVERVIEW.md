@@ -1,8 +1,6 @@
 # ML1 Overview
 
-ML1 is the commit risk model in this framework. It predicts security risk for changed C/C++ functions and then aggregates those function-level predictions into a commit-level risk decision.
-
-In dissertation terminology, ML1 is commit-aware function-level vulnerability risk prediction.
+ML1 is the commit-risk model in this framework. It predicts security risk for changed C/C++ functions and aggregates those function-level predictions into a commit-level risk decision.
 
 ## Why ML1 Is Function-Centric
 
@@ -22,7 +20,7 @@ This keeps runtime inference aligned with the model's training granularity.
 
 ## ML1 Code File Structure
 
-This section gives an examiner-level map of what each ML1 file does, so the full ML1 design can be understood without reading source code line by line.
+This section summarises the responsibility of each ML1 file so the full ML1 design can be understood without reading source code line by line.
 
 ### ML1 Source Tree
 
@@ -359,7 +357,7 @@ Columns:
 - score/decision: `max_risk_score`, `commit_risk_level`, `status`, `reason`
 - runtime metrics: `vectorization_time_ms`, `model_inference_time_ms`, `total_prediction_runtime_ms`
 
-Report generation behavior:
+Report generation behaviour:
 
 - COMPLETED: both `commit_risk_report.csv` and `commit_risk_summary.csv` are generated
 - SKIPPED: both `commit_risk_report.csv` and `commit_risk_summary.csv` are generated

@@ -6,8 +6,6 @@ This guide explains what to run, in what order, and how to validate ML1 end-to-e
 
 ML1 predicts risk for changed C/C++ functions in a commit or pull request and produces:
 
-ML1 can be described as commit-aware function-level vulnerability risk prediction.
-
 - function-level report
 - commit-level summary report
 
@@ -159,11 +157,11 @@ Important checkout setting:
     fetch-depth: 0
 ```
 
-Runtime event behavior:
+Runtime event behaviour:
 
 - `pull_request` runs pass PR base/head SHAs into ML1, so ML1 compares PR base vs PR head.
-- `push` runs (for example direct push to `main`) use implemented fallback diff behavior when explicit base/head SHAs are not provided.
-- `workflow_dispatch` runs also use implemented fallback behavior when explicit base/head SHAs are absent.
+- `push` runs (for example direct push to `main`) use implemented fallback diff behaviour when explicit base/head SHAs are not provided.
+- `workflow_dispatch` runs also use implemented fallback diff behaviour when explicit base/head SHAs are absent.
 
 `fetch-depth: 0` is strongly recommended to keep diff resolution reliable.
 
@@ -242,7 +240,7 @@ Interpretation:
 
 1. Run safe C/C++ change and confirm LOW or PASS-oriented output.
 2. Run known vulnerable pattern change and confirm HIGH appears.
-3. Run ambiguous change and check REVIEW_REQUIRED behavior.
+3. Run ambiguous change and check REVIEW_REQUIRED behaviour.
 4. Confirm reports are produced even when no C/C++ changes (SKIPPED summary).
 
 ## Common Issues and Fixes
@@ -279,10 +277,10 @@ When these checks fail, ML1 reports a FAILED outcome and exits non-zero.
 
 During model evaluation, ROC-AUC may be unavailable for specific splits (for example, single-class target distributions). In that case, ML1 records ROC-AUC as unavailable instead of writing a misleading `0.0`.
 
-### PR behavior differs from push/manual behavior
+### PR behaviour differs from push/manual behaviour
 
 - PR uses explicit base/head refs from GitHub event context.
-- Push/manual runs use fallback diff behavior when explicit refs are absent.
+- Push/manual runs use fallback diff behaviour when explicit refs are absent.
 - Ensure sufficient git history exists on runner.
 
 ## Suggested Operational Defaults

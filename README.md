@@ -3,7 +3,7 @@
 This repository contains an MSc dissertation framework implementing an
 AI-driven DevSecOps pipeline with GitHub Actions for C/C++ security
 analysis. It combines ML1 Commit Risk Prediction, ML2 Static Analysis
-Alert Prioritization, ML3 Pipeline Anomaly Detection, and a Security
+Alert Prioritisation, ML3 Pipeline Anomaly Detection, and a Security
 Decision Engine into one integrated workflow. The framework produces
 deterministic, explainable CI/CD security decisions from component reports.
 
@@ -13,7 +13,7 @@ This framework operationalizes AI-assisted DevSecOps by integrating four
 runtime components in a single CI/CD workflow:
 
 -   ML1 commit risk prediction
--   ML2 static-analysis alert prioritization
+-   ML2 static-analysis alert prioritisation
 -   ML3 pipeline anomaly detection
 -   Security Decision Engine
 
@@ -32,7 +32,7 @@ flowchart TD
 ## Key Features
 
 -   Commit-level risk prediction from changed C/C++ functions (ML1).
--   Static-analysis alert prioritization for Cppcheck and Clang outputs
+-   Static-analysis alert prioritisation for Cppcheck and Clang outputs
     (ML2).
 -   Repository-specific behavioural anomaly detection using historical
     pipeline metrics (ML3).
@@ -67,8 +67,8 @@ below.
 1.  Install SAST tooling and Python dependencies.
 2.  Run Cppcheck and Clang Static Analyzer scans.
 3.  Run ML1 commit risk prediction.
-4.  Run ML2 Cppcheck alert prioritization.
-5.  Run ML2 Clang alert prioritization.
+4.  Run ML2 Cppcheck alert prioritisation.
+5.  Run ML2 Clang alert prioritisation.
 6.  Restore ML3 state from `devsecops-state` when available.
 7.  Collect ML3 current pipeline metrics.
 8.  Run ML3 inference before history append.
@@ -140,7 +140,7 @@ The framework uses the following languages, libraries, tools, and platforms:
 * Cppcheck for static analysis of C/C++ source code.
 * Clang Static Analyzer and Clang Tools for C/C++ static analysis.
 * Git for source-code version control and change-based analysis.
-* Git LFS for storing and distributing trained machine learning model artefacts.
+* Git LFS for storing and distributing trained machine learning model artifacts.
 
 ### Software Requirements
 
@@ -165,7 +165,7 @@ Recommended minimum environment:
 
 * Standard 64-bit CPU
 * 8 GB RAM
-* Sufficient storage for the repository, trained model artefacts, generated reports, and Git LFS files
+* Sufficient storage for the repository, trained model artifacts, generated reports, and Git LFS files
 * Internet access during initial setup to install dependencies, retrieve Git LFS model files, and install static-analysis tools
 
 Model inference and normal GitHub Action execution can run on a standard GitHub-hosted Ubuntu runner.
@@ -252,7 +252,7 @@ described in the dissertation.
 
 The original training datasets are not included in this repository because of their size and, where applicable, dataset licensing and redistribution restrictions.
 
-The repository contains the preprocessing, conversion, feature-engineering, training, and evaluation scripts required to reproduce the machine learning datasets and model artefacts used in the dissertation.
+The repository contains the preprocessing, conversion, feature-engineering, training, and evaluation scripts required to reproduce the machine learning datasets and model artifacts used in the dissertation.
 
 ### ML1 Commit Risk Prediction
 
@@ -290,11 +290,11 @@ Relevant scripts and documentation:
 
 * AW4C conversion and preprocessing scripts
 * Juliet dataset conversion and preprocessing scripts
-* `ml/alert_prioritizer/prepare_clang_features.py`
-* `ml/alert_prioritizer/train_cppcheck_model.py`
-* `ml/alert_prioritizer/train_clang_model.py`
-* `doc/ML2/ML2-CPPCHECK-GUIDE.md`
-* `doc/ML2/ML2-CPPCHECK-OVERVIEW.md`
+* `ml/alert_prioritizer/cppcheck/train_cppcheck_model.py`
+* `ml/alert_prioritizer/clang/prepare_clang_features.py`
+* `ml/alert_prioritizer/clang/train_clang_model.py`
+* `doc/ML2/ML2-CPPHECK-GUIDE.md`
+* `doc/ML2/ML2-CPPHECK-OVERVIEW.md`
 * `doc/ML2/ML2-CLANG-GUIDE.md`
 * `doc/ML2/ML2-CLANG-OVERVIEW.md`
 
@@ -332,7 +332,7 @@ Typical generated locations include:
 * `data/intermediate/`
 * `data/features/`
 
-These generated datasets are not committed to the repository. The final trained model artefacts required for normal framework execution are included under `models/` and are managed using Git LFS.
+These generated datasets are not committed to the repository. The final trained model artifacts required for normal framework execution are included under `models/` and are managed using Git LFS.
 
 Retraining is not required to run the framework. It is only necessary when reproducing the model-development and evaluation process described in the dissertation.
 
@@ -376,7 +376,7 @@ and the Decision Engine.
 
 The framework validation evidence is organized into three layers:
 
-1. Focused automated software tests (deterministic runtime behavior and report contracts).
+1. Focused automated software tests (deterministic runtime behaviour and report contracts).
 2. Offline machine-learning evaluation (validation and held-out test evidence per component).
 3. End-to-end framework validation (GitHub Actions execution in vulnerability scenarios producing PASS, REVIEW, and BLOCK outcomes).
 
@@ -435,7 +435,7 @@ These evaluation artifacts support dissertation analysis and are distinct from d
 
 ### End-to-End Framework Validation
 
-End-to-end behavior is validated through GitHub Actions workflow execution and scenario repositories, including:
+End-to-end behaviour is validated through GitHub Actions workflow execution and scenario repositories, including:
 
 - push/pull-request workflow runs
 - PASS, REVIEW, and BLOCK outcome cases

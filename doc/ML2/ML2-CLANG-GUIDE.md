@@ -21,7 +21,7 @@ For Clang specifically:
 
 Final deployed model:
 
-- The final deployed ML2 Clang model is ANN.
+- The final deployed ML2 Clang model is ANN 64.
 - The deployed model artifact is models/alert_prioritizer/clang/clang_priority_model.pkl.
 
 ## Complete Architecture
@@ -89,7 +89,7 @@ Script:
 
 - ml/alert_prioritizer/clang/clang_to_dataset.py
 
-Committed annotation behavior:
+Committed annotation behaviour:
 
 1. Parse scanner text outputs and candidate source locations.
 2. Match text findings to plist diagnostics using normalized:
@@ -210,33 +210,42 @@ Current split summary:
 
 ## Candidate Models
 
-The training script evaluates exactly four candidate models:
+The training script evaluates the following candidate configurations:
 
-- Logistic Regression
-- Linear SVM (LinearSVC)
-- Random Forest
-- ANN (MLPClassifier)
+- Logistic Regression with `C = 0.1`
+- Logistic Regression with `C = 1`
+- Logistic Regression with `C = 10`
+- Linear SVM (`LinearSVC`) with `C = 0.1` and `max_iter = 10000`
+- Linear SVM (`LinearSVC`) with `C = 1` and `max_iter = 10000`
+- Linear SVM (`LinearSVC`) with `C = 10` and `max_iter = 10000`
+- Random Forest constrained configuration
+- Random Forest unrestricted configuration
+- ANN with hidden layer sizes `(64,)`
+- ANN with hidden layer sizes `(128, 64)`
+- ANN with hidden layer sizes `(128, 64)` and stronger regularisation
 
 Selection criteria:
 
-1. Primary: Macro F1
-2. Secondary: HIGH recall
-3. Tie-breakers: Weighted F1, then Accuracy
+1. Validation HIGH recall must be at least `0.60` for eligibility.
+2. Primary ranking metric: Macro F1.
+3. Secondary ranking metric: HIGH recall.
+4. Tie-breaker: lowest HIGH-to-LOW misclassification count.
+5. Further tie-breakers: Weighted F1, then Accuracy.
 
 ## Final Model and Results
 
 Selected model:
 
-- ANN
+- ANN 64
 
 Final test metrics:
 
-- Accuracy: 0.802523
-- Macro F1: 0.697078
-- Weighted F1: 0.793365
-- HIGH recall: 0.586009
-- HIGH precision: 0.907638
-- HIGH F1: 0.712195
+- Accuracy: 0.802522836015659
+- Macro F1: 0.6970778493290114
+- Weighted F1: 0.7933647490688439
+- HIGH recall: 0.5860091743119266
+- HIGH precision: 0.9076376554174067
+- HIGH F1: 0.7121951219512195
 
 Interpretation:
 

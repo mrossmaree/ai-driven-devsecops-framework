@@ -67,7 +67,7 @@ Operational details:
 3. Aggregate ML1 risk counts, ML2 priority counts, and ML3 anomaly summary fields.
 4. Apply deterministic ordered decision rules.
 5. Write reports/final_decision/security_decision.csv.
-6. Return exit code behavior based on decision (BLOCK exits non-zero; REVIEW and PASS exit zero).
+6. Return exit code behaviour based on decision (BLOCK exits non-zero; REVIEW and PASS exit zero).
 
 ## Inputs
 
@@ -227,7 +227,7 @@ Issue summary fields include up to five examples per category, serialized as sem
 
 The action invokes the engine in the step Run final security decision engine and uploads reports/final_decision/security_decision.csv as artifact final-security-decision.
 
-Workflow exit behavior:
+Workflow exit behaviour:
 
 - PASS: step exits 0.
 - REVIEW: step exits 0.

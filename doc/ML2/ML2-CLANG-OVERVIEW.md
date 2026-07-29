@@ -15,7 +15,7 @@ Framework role:
 
 Final deployed model:
 
-- ANN (artifact: models/alert_prioritizer/clang/clang_priority_model.pkl)
+- ANN 64 (artefact: models/alert_prioritizer/clang/clang_priority_model.pkl)
 
 ## Architecture Summary
 
@@ -25,7 +25,7 @@ flowchart LR
   B --> C[Annotation + ground truth]
   C --> D[Priority labeling + features]
   D --> E[Grouped model training and selection]
-  E --> F[Deployed ANN model]
+  E --> F[Deployed ANN 64 model]
   F --> G[Runtime Clang prioritizer]
   H[reports/clang-report] --> G
   G --> I[prioritised-alerts.csv]
@@ -49,7 +49,7 @@ Processed outputs:
 
 ## Expanded Juliet Scanning Design
 
-Committed scanner behavior:
+Committed scanner behaviour:
 
 - CWE families: CWE121, CWE122, CWE415, CWE416, CWE476.
 - Deterministic complete-case grouping by Juliet case ID.
@@ -59,7 +59,7 @@ Committed scanner behavior:
 
 ## Annotation and Ground Truth Strategy
 
-Committed annotation behavior includes:
+Committed annotation behaviour includes:
 
 - matching text reports to plist diagnostics
 - normalized path, line, and diagnostic-message matching
@@ -134,33 +134,42 @@ Committed methodology:
 - model selection on validation only
 - untouched final test evaluation
 
-Candidate models:
+Candidate model configurations:
 
-- Logistic Regression
-- Linear SVM
-- Random Forest
-- ANN
+- Logistic Regression with `C = 0.1`
+- Logistic Regression with `C = 1`
+- Logistic Regression with `C = 10`
+- Linear SVM (`LinearSVC`) with `C = 0.1` and `max_iter = 10000`
+- Linear SVM (`LinearSVC`) with `C = 1` and `max_iter = 10000`
+- Linear SVM (`LinearSVC`) with `C = 10` and `max_iter = 10000`
+- Random Forest constrained configuration
+- Random Forest unrestricted configuration
+- ANN with hidden layer sizes `(64,)`
+- ANN with hidden layer sizes `(128, 64)`
+- ANN with hidden layer sizes `(128, 64)` and stronger regularisation
 
 Selection strategy:
 
-1. primary: Macro F1
-2. secondary: HIGH recall
-3. tie-breakers: Weighted F1, then Accuracy
+1. Eligibility threshold: validation HIGH recall must be at least `0.60`.
+2. Primary ranking metric: Macro F1.
+3. Secondary ranking metric: HIGH recall.
+4. Tie-breaker: lowest HIGH-to-LOW misclassification count.
+5. Further tie-breakers: Weighted F1, then Accuracy.
 
 ## Final Model and Performance
 
 Selected model:
 
-- ANN
+- ANN 64
 
 Final test metrics:
 
-- Accuracy: 0.802523
-- Macro F1: 0.697078
-- Weighted F1: 0.793365
-- HIGH recall: 0.586009
-- HIGH precision: 0.907638
-- HIGH F1: 0.712195
+- Accuracy: 0.802522836015659
+- Macro F1: 0.6970778493290114
+- Weighted F1: 0.7933647490688439
+- HIGH recall: 0.5860091743119266
+- HIGH precision: 0.9076376554174067
+- HIGH F1: 0.7121951219512195
 
 Interpretation:
 
@@ -218,7 +227,7 @@ Failure handling is explicit and non-zero for missing/invalid reports, scanner f
 
 ## action.yml Clang Behavior
 
-Committed Clang scanner orchestration behavior:
+Committed Clang scanner orchestration behaviour:
 
 - scan-build exit 0: successful scan
 - scan-build exit 1 with --status-bugs: findings present, continue
