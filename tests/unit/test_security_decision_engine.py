@@ -43,10 +43,17 @@ def test_clean_inputs_produce_pass_and_counts():
     assert result["alert_low_count"] == 2
 
 
-def test_ml1_high_produces_block():
-    result = sde.calculate_decision(_commit_df(["HIGH"]), pd.DataFrame(), pd.DataFrame(), _anomaly_df("NORMAL"))
-    assert result["decision"] == "BLOCK"
+def test_ml1_high_alone_produces_review():
+    result = sde.calculate_decision(
+        _commit_df(["HIGH"]),
+        pd.DataFrame(),
+        pd.DataFrame(),
+        _anomaly_df("NORMAL"),
+    )
+
+    assert result["decision"] == "REVIEW"
     assert result["commit_high_count"] == 1
+    assert "without confirming" in result["reason"].lower()
 
 
 def test_ml2_high_produces_block_and_combined_counts():
@@ -66,7 +73,7 @@ def test_ml2_high_produces_block_and_combined_counts():
     "commit_levels,alert_levels,expected_reason_fragment",
     [
         (["REVIEW_REQUIRED"], [], "manual review"),
-        ([], ["MEDIUM"], "medium severity"),
+        ([], ["MEDIUM"], "medium-severity"),
     ],
 )
 def test_medium_or_review_required_produce_review(commit_levels, alert_levels, expected_reason_fragment):
