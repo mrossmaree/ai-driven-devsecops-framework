@@ -4,40 +4,40 @@ This repository provides a reusable composite action for AI-assisted DevSecOps c
 
 ## Composite Action vs Workflow Triggers
 
-- [composite action](../../action.yml) is a composite action definition.
-- It defines runtime steps, not workflow start events.
-- Event triggers must be defined in the consuming repository workflow.
-- GitHub event context is injected at runtime into action steps.
+* The [composite action](../../action.yml) defines the framework's runtime steps.
+* It does not define workflow start events.
+* Event triggers must be defined in the consuming repository workflow.
+* GitHub event context is injected into the action steps at runtime.
 
 ## Default Trigger Model
 
-The default template in [workflow template](template/run-ai-devsecops-security-scan.yml) is designed for three execution paths:
+The default [workflow template](template/run-ai-devsecops-security-scan.yml) supports three execution paths:
 
-1. Pull request to `main` (preventive).
-2. Direct push to `main` (reactive).
+1. Pull request to `main` — preventive.
+2. Direct push to `main` — reactive.
 3. Manual `workflow_dispatch` run.
 
 ### Trigger Table
 
-| User action | Automatic run? | Event |
-|---|---|---|
-| Push C/C++ change directly to `main` | Yes | `push` |
-| Push documentation-only change to `main` | No | path filter blocks |
-| Open PR to `main` with C/C++ changes | Yes | `pull_request` |
-| Push new C/C++ commit to branch with open PR to `main` | Yes | `pull_request` (`synchronize`) |
-| Push to feature branch without PR | No | none |
-| Manual run from Actions | Yes | `workflow_dispatch` |
+| User action                                            | Automatic run? | Event                          |
+| ------------------------------------------------------ | -------------- | ------------------------------ |
+| Push C/C++ change directly to `main`                   | Yes            | `push`                         |
+| Push documentation-only change to `main`               | No             | Path filter blocks the run     |
+| Open PR to `main` with C/C++ changes                   | Yes            | `pull_request`                 |
+| Push new C/C++ commit to branch with open PR to `main` | Yes            | `pull_request` (`synchronize`) |
+| Push to feature branch without PR                      | No             | None                           |
+| Manual run from Actions                                | Yes            | `workflow_dispatch`            |
 
 ## Security Gate Behavior
 
-- `BLOCK` fails the workflow.
-- On PRs, merge prevention requires branch protection with required checks enabled.
-- On direct pushes to `main`, failed workflow does not auto-revert the commit.
-- `REVIEW` is advisory by default and is only merge-blocking if repository policy enforces it.
+* `BLOCK` fails the `security-scan` workflow check.
+* On PRs, merge prevention requires branch protection or a ruleset that requires the `security-scan` check.
+* On direct pushes to `main`, a failed workflow does not automatically revert the commit.
+* `REVIEW` is advisory by default and does not block merging.
 
 ## Checkout and ML1 Diff Reliability
 
-Recommended checkout in consuming workflow:
+Recommended checkout configuration in the consuming workflow:
 
 ```yaml
 - uses: actions/checkout@v4
@@ -48,43 +48,43 @@ Recommended checkout in consuming workflow:
 
 This supports:
 
-- PR head checkout for `pull_request` events.
-- `main` checkout for direct main pushes.
-- selected branch/ref checkout for `workflow_dispatch`.
+* PR head checkout for `pull_request` events;
+* `main` checkout for direct pushes to `main`;
+* selected branch or ref checkout for `workflow_dispatch`.
 
 `fetch-depth: 0` is strongly recommended for reliable ML1 diff resolution.
 
-## ML1 Event Behavior in Runtime
+## ML1 Event Behavior at Runtime
 
-- PR runs pass pull-request base/head SHAs into ML1.
-- Push/manual runs use implemented fallback diff behavior when explicit base/head are absent.
+* Pull-request runs pass the PR base and head SHAs into ML1.
+* Push and manual runs use the implemented fallback diff behaviour when explicit base and head SHAs are unavailable.
 
-## ML3 Persistence with Default Template
+## ML3 Persistence with the Default Template
 
-The persistence condition in [composite action](../../action.yml) requires:
+The persistence condition in the [composite action](../../action.yml) requires:
 
-- `github.event_name == 'push'`
-- `github.ref_name != 'main'`
-- `inputs.ml3-persist-state == 'true'`
+* `github.event_name == 'push'`;
+* `github.ref_name != 'main'`;
+* `inputs.ml3-persist-state == 'true'`.
 
-Under the default template (automatic pushes only on `main`), that condition is not normally reached.
+Under the default template, automatic `push` runs are limited to `main`. Therefore, the non-main push persistence condition is not reached automatically.
 
-Therefore:
+As a result:
 
-- default behavior is no automatic ML3 state write-back;
-- persistence requires an intentional non-main push workflow design;
-- PR runs remain safe from state commits.
+* the default behaviour performs no automatic ML3 state write-back;
+* persistence requires an intentionally designed non-main push workflow;
+* pull-request runs remain protected from state commits.
 
 ## Workflow Permissions
 
-The default template should use least privilege with read-only repository access:
+The default template follows least privilege by using read-only repository access:
 
 ```yaml
 permissions:
   contents: read
 ```
 
-An intentionally separate ML3 persistence workflow that commits and pushes state must use:
+A separately designed ML3 persistence workflow that commits and pushes state must use:
 
 ```yaml
 permissions:
