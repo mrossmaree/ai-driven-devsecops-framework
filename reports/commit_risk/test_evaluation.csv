@@ -1,2 +1,2 @@
-model,accuracy,precision,recall,f1_score,roc_auc,inference_time,training_time,selected
-Logistic Regression,0.7777553654994352,0.06628191675410983,0.6903460837887068,0.12095101324397639,0.8089746228567354,0.002102250000461936,0.9971924999263138,True
+candidate_id,model_family,configuration_name,configuration,threshold,accuracy,precision,recall,f1_score,f2_score,average_precision,roc_auc,true_negatives,false_positives,false_negatives,true_positives,false_positive_rate,score_time,threshold_inference_time,training_time,selected
+rf_300_depth_20_leaf_2,Random Forest,300_depth_20_leaf_2,"{""class_weight"": ""balanced"", ""max_depth"": 20, ""min_samples_leaf"": 2, ""n_estimators"": 300, ""n_jobs"": -1, ""random_state"": 42}",0.5,0.9515491366790383,0.1646090534979424,0.29143897996357016,0.210387902695595,0.25252525252525254,0.15002623895088266,0.8192332337707728,23427,812,389,160,0.033499731837121995,0.07424987498961855,1.6165999113582075e-05,10.731709250001586,True
